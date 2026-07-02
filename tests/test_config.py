@@ -75,6 +75,10 @@ def test_config_validation_raises_error_for_missing_required():
     for key in required_keys:
         saved_values[key] = os.environ.pop(key, None)
 
+    # 重置配置缓存
+    import dupan_download.config
+    dupan_download.config._config = None
+
     try:
         with pytest.raises(ValueError, match="缺少必需的配置"):
             get_config()
@@ -83,3 +87,5 @@ def test_config_validation_raises_error_for_missing_required():
         for key, value in saved_values.items():
             if value is not None:
                 os.environ[key] = value
+        # 重置配置缓存
+        dupan_download.config._config = None

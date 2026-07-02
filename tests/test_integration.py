@@ -2,6 +2,7 @@
 import os
 import tempfile
 import shutil
+import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
@@ -41,10 +42,14 @@ def mock_env():
 
 def test_end_to_end_success_flow(mock_env):
     """测试端到端成功流程"""
+    # 重置配置缓存
+    import dupan_download.config
+    dupan_download.config._config = None
+
     runner = CliRunner()
 
-    with patch('dupan_download.downloader.BaiduDownloader') as mock_dl_class, \
-         patch('dupan_download.uploader.SFTPUploader') as mock_ul_class:
+    with patch('dupan_download.cli.BaiduDownloader') as mock_dl_class, \
+         patch('dupan_download.cli.SFTPUploader') as mock_ul_class:
 
         # 模拟下载器
         mock_dl = MagicMock()
@@ -74,10 +79,14 @@ def test_end_to_end_success_flow(mock_env):
 
 def test_end_to_end_with_keep_temp(mock_env):
     """测试保留临时文件"""
+    # 重置配置缓存
+    import dupan_download.config
+    dupan_download.config._config = None
+
     runner = CliRunner()
 
-    with patch('dupan_download.downloader.BaiduDownloader') as mock_dl_class, \
-         patch('dupan_download.uploader.SFTPUploader') as mock_ul_class, \
+    with patch('dupan_download.cli.BaiduDownloader') as mock_dl_class, \
+         patch('dupan_download.cli.SFTPUploader') as mock_ul_class, \
          patch('dupan_download.cli.cleanup_temp_dir') as mock_cleanup:
 
         mock_dl = MagicMock()
@@ -103,9 +112,13 @@ def test_end_to_end_with_keep_temp(mock_env):
 
 def test_validation_failure(mock_env):
     """测试链接验证失败"""
+    # 重置配置缓存
+    import dupan_download.config
+    dupan_download.config._config = None
+
     runner = CliRunner()
 
-    with patch('dupan_download.downloader.BaiduDownloader') as mock_dl_class:
+    with patch('dupan_download.cli.BaiduDownloader') as mock_dl_class:
         mock_dl = MagicMock()
         mock_dl.validate_link.return_value = False
         mock_dl_class.return_value = mock_dl
@@ -121,10 +134,14 @@ def test_validation_failure(mock_env):
 
 def test_sftp_connection_failure(mock_env):
     """测试SFTP连接失败"""
+    # 重置配置缓存
+    import dupan_download.config
+    dupan_download.config._config = None
+
     runner = CliRunner()
 
-    with patch('dupan_download.downloader.BaiduDownloader') as mock_dl_class, \
-         patch('dupan_download.uploader.SFTPUploader') as mock_ul_class:
+    with patch('dupan_download.cli.BaiduDownloader') as mock_dl_class, \
+         patch('dupan_download.cli.SFTPUploader') as mock_ul_class:
 
         mock_dl = MagicMock()
         mock_dl.validate_link.return_value = True
