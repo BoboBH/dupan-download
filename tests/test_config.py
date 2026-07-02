@@ -2,7 +2,7 @@
 import os
 import pytest
 from pathlib import Path
-from dupan_download.config import Config, get_config
+from dupan_download.config import Config, get_config, _config
 
 
 def test_get_config_creates_singleton():
@@ -64,28 +64,42 @@ def test_config_custom_values():
 
 def test_config_validation_raises_error_for_missing_required():
     """测试缺少必需配置时抛出错误"""
-    # 清除所有必需的环境变量
-    required_keys = [
-        'BAIDU_APP_ID', 'BAIDU_APP_KEY', 'BAIDU_SECRET_KEY',
-        'BAIDU_ACCESS_TOKEN', 'SFTP_HOST', 'SFTP_USERNAME',
-        'SFTP_PASSWORD', 'SFTP_REMOTE_PATH'
-    ]
+    # 使用子进程测试，避免单例缓存问题
+    import subprocess
+    import sys
 
-    saved_values = {}
-    for key in required_keys:
-        saved_values[key] = os.environ.pop(key, None)
+    # 创建一个临时脚本来测试配置验证
+    test_script = """
+import os
+from dupan_download.config import Config
 
-    # 重置配置缓存
-    import dupan_download.config
-    dupan_download.config._config = None
+# 确保所有必需的环境变量都不存在
+for key in ['BAIDU_APP_ID', 'BAIDU_APP_KEY', 'BAIDU_SECRET_KEY',
+            'BAIDU_ACCESS_TOKEN', 'SFTP_HOST', 'SFTP_USERNAME',
+            'SFTP_PASSWORD', 'SFTP_REMOTE_PATH']:
+    os.environ.pop(key, None)
 
-    try:
-        with pytest.raises(ValueError, match="缺少必需的配置"):
-            get_config()
-    finally:
-        # 恢复环境变量
-        for key, value in saved_values.items():
-            if value is not None:
-                os.environ[key] = value
-        # 重置配置缓存
-        dupan_download.config._config = None
+try:
+    config = Config()
+    # 访问属性来触发验证
+    _ = config.baidu_app_id  # 这应该抛出ValueError
+    print("ERROR: Should have raised ValueError")
+    exit(1)
+except ValueError as e:
+    if "缺少必需的配置" in str(e):
+        print("SUCCESS: Correctly raised ValueError")
+        exit(0)
+    else:
+        print(f"ERROR: Wrong error message: {e}")
+        exit(1)
+"""
+
+    result = subprocess.run(
+        [sys.executable, '-c', test_script],
+        capture_output=True,
+        text=True,
+        cwd=os.getcwd()
+    )
+
+    assert result.returncode == 0, f"Config validation test failed: {result.stdout} {result.stderr}"
+    assert "SUCCESS" in result.stdout
