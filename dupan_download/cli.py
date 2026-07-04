@@ -49,7 +49,7 @@ def main(share_link: str, extract_code: str, keep_temp: bool,
             logger.error("链接验证失败，请检查链接和提取码")
             sys.exit(1)
 
-        logger.info("✓ 链接验证成功")
+        logger.info("链接验证成功")
 
         # 下载文件
         logger.info("开始下载文件...")
@@ -58,7 +58,7 @@ def main(share_link: str, extract_code: str, keep_temp: bool,
         success_count = sum(1 for r in download_results if r.success)
         fail_count = len(download_results) - success_count
 
-        logger.info(f"✓ 下载完成: {success_count} 成功, {fail_count} 失败")
+        logger.info(f"下载完成: {success_count} 成功, {fail_count} 失败")
 
         if fail_count > 0:
             logger.warning("失败的文件:")
@@ -66,37 +66,41 @@ def main(share_link: str, extract_code: str, keep_temp: bool,
                 if not result.success:
                     logger.warning(f"  - {result.remote_path}: {result.error}")
 
-        # 初始化上传器
-        uploader = SFTPUploader()
-        logger.info("上传器初始化完成")
+        # 如果有成功下载的文件，继续上传流程
+        if success_count > 0:
+            # 初始化上传器
+            uploader = SFTPUploader()
+            logger.info("上传器初始化完成")
 
-        # 连接SFTP
-        if not uploader.connect():
-            logger.error("SFTP连接失败")
-            sys.exit(1)
+            # 连接SFTP
+            if not uploader.connect():
+                logger.error("SFTP连接失败")
+                sys.exit(1)
 
-        try:
-            logger.info("开始上传文件...")
-            upload_results = uploader.upload_folder(temp_path, config.sftp_remote_path)
+            try:
+                logger.info("开始上传文件...")
+                upload_results = uploader.upload_folder(temp_path, config.sftp_remote_path)
 
-            success_count = sum(1 for r in upload_results if r.success)
-            fail_count = len(upload_results) - success_count
+                success_count = sum(1 for r in upload_results if r.success)
+                fail_count = len(upload_results) - success_count
 
-            logger.info(f"✓ 上传完成: {success_count} 成功, {fail_count} 失败")
+                logger.info(f"上传完成: {success_count} 成功, {fail_count} 失败")
 
-            if fail_count > 0:
-                logger.warning("失败的文件:")
-                for result in upload_results:
-                    if not result.success:
-                        logger.warning(f"  - {result.local_path}: {result.error}")
+                if fail_count > 0:
+                    logger.warning("失败的文件:")
+                    for result in upload_results:
+                        if not result.success:
+                            logger.warning(f"  - {result.local_path}: {result.error}")
 
-        finally:
-            uploader.disconnect()
+            finally:
+                uploader.disconnect()
+        else:
+            logger.info("没有文件被成功下载，跳过上传步骤")
 
         # 清理临时文件
         if not keep_temp:
             cleanup_temp_dir(temp_path)
-            logger.info("✓ 清理临时文件")
+            logger.info("清理临时文件")
         else:
             logger.info(f"保留临时文件: {temp_path}")
 
@@ -105,9 +109,9 @@ def main(share_link: str, extract_code: str, keep_temp: bool,
         total_fail = fail_count
 
         click.echo("\n执行完成")
-        click.echo(f"✓ 成功处理: {total_success} 个文件")
+        click.echo(f"成功处理: {total_success} 个文件")
         if total_fail > 0:
-            click.echo(f"✗ 失败: {total_fail} 个文件")
+            click.echo(f"失败: {total_fail} 个文件")
 
     except ValueError as e:
         logger.error(f"配置错误: {e}")

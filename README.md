@@ -11,30 +11,117 @@
 - ✅ **详细报告**: 提供成功/失败文件的详细报告
 - ✅ **灵活配置**: 支持环境变量和配置文件
 - ✅ **进度显示**: 实时显示下载和上传进度
+- ✅ **无依赖部署**: 支持打包为独立exe，无需Python环境（NEW!）
+
+## 📁 项目结构
+
+```
+dupan-download/
+├── dupan_download/       # 主程序包
+├── setup/                # ⭐ 打包构建脚本
+│   ├── setup.bat         # 🔧 主打包脚本（推荐使用）
+│   ├── build.spec        # PyInstaller 配置
+│   └── cleanup.bat       # 清理脚本
+├── docs/                 # 📚 文档目录
+│   ├── guides/           # 用户指南
+│   └── reports/          # 技术报告
+├── delete/               # 🗑️ 已删除的文件
+└── README.md             # ⭐ 项目说明
+
+详细说明：[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)
+```
+
+## 🚀 快速开始
+
+### 开发环境
+
+```bash
+# 1. 创建虚拟环境
+python -m venv .venv
+
+# 2. 安装依赖
+.venv\Scripts\activate
+pip install -r requirements.txt
+
+# 3. 运行程序
+python -m dupan_download --help
+python -m dupan_download apps/bypy/test_pdf --keep-temp
+```
+
+### 打包构建
+
+```bash
+# 进入打包目录
+cd setup
+
+# 使用主打包脚本（推荐）
+setup.bat all          # 完整打包流程
+setup.bat build        # 仅构建可执行文件
+setup.bat zip          # 仅创建 ZIP 分发包
+
+# 或使用原始脚本
+auto_build.bat         # 完整自动构建
+quick_build.bat        # 快速构建
+```
 
 ## 系统要求
 
+### 开发环境
 - Python 3.8 或更高版本
 - 稳定的网络连接
-- 百度网盘开放平台账号
-- SFTP服务器访问权限
+- 百度网盘账号
+- SFTP服务器访问权限（可选）
+
+### 部署环境（无Python模式）
+- Windows 7/8/10/11
+- **无需Python环境**
+- **无需安装bypy**
+- 稳定的网络连接
 
 ## 安装
 
-### 1. 克隆项目
+### 方式一：无Python部署（推荐）
+
+适用于没有Python环境的Windows电脑，或者需要快速部署的场景。
+
+```bash
+# 开发机：创建发布包
+cd setup
+setup.bat all          # 完整打包流程
+# 或使用分步命令
+setup.bat build        # 构建可执行文件
+setup.bat package      # 创建部署包
+setup.bat zip          # 创建 ZIP 分发包
+
+# 分发：dupan-download-windows-2.0.0.zip
+# 目标机：解压并运行
+pan-download.exe --test-config
+pan-download.exe apps/bypy/test_pdf --upload-sftp
+```
+
+详细文档：
+- [项目结构说明](PROJECT_STRUCTURE.md)
+- [bypy认证指南](docs/guides/BYPY_AUTHENTICATION_GUIDE.md)
+- [部署验证报告](docs/reports/DEPLOYMENT_ZIP_VERIFICATION_REPORT.md)
+
+### 方式二：Python环境安装
+
+适用于有Python环境的开发机器。
+
+#### 1. 克隆项目
 
 ```bash
 git clone <repository-url>
 cd dupan-download
 ```
 
-### 2. 安装依赖
+#### 2. 安装依赖
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. 安装工具
+#### 3. 安装工具
 
 ```bash
 python setup.py install
@@ -55,13 +142,7 @@ cp .env.example .env
 编辑 `.env` 文件，填入实际的配置信息：
 
 ```bash
-# 百度网盘API配置
-BAIDU_APP_ID=your_app_id
-BAIDU_APP_KEY=your_app_key
-BAIDU_SECRET_KEY=your_secret_key
-BAIDU_ACCESS_TOKEN=your_access_token
-
-# SFTP服务器配置
+# SFTP服务器配置（必需，如需上传功能）
 SFTP_HOST=sftp.example.com
 SFTP_PORT=22
 SFTP_USERNAME=your_username
@@ -74,12 +155,19 @@ CONNECT_TIMEOUT=30
 TRANSFER_TIMEOUT=300
 ```
 
-### 3. 获取百度网盘API凭证
+### 3. 配置百度网盘认证
 
-1. 访问 [百度网盘开放平台](https://pan.baidu.com/union/doc/0ksg0sbig)
-2. 注册开发者账号
-3. 创建应用获取 APP_ID, APP_KEY, SECRET_KEY
-4. 进行OAuth认证获取 ACCESS_TOKEN
+本项目使用 **bypy** 库进行百度网盘下载，采用 OAuth 认证方式：
+
+```bash
+# 运行认证向导
+pan-download --setup-bypy
+
+# 或直接使用bypy命令
+bypy info
+```
+
+认证信息会自动保存在 `~/.bypy/` 目录中，无需在 `.env` 文件中配置。
 
 ## 使用方法
 
@@ -230,8 +318,73 @@ MIT License
 
 ## 更新日志
 
+### v1.0.0 (2026-07-02)
+- ✨ **重大更新**: 支持无Python环境部署
+- ✅ 打包为独立exe文件
+- ✅ 内置所有依赖（包括bypy）
+- ✅ 智能认证文件处理
+- ✅ 一键安装脚本
+- ✅ 用户友好的配置向导
+- 🔧 改进的错误处理和日志
+
 ### v0.1.0 (2026-07-02)
 - 初始版本发布
 - 支持基本的下载和上传功能
 - 错误处理和重试机制
 - 详细的执行报告
+
+## 🚀 快速开始指南
+
+### 无Python环境部署（推荐）
+
+```bash
+# 开发机：一键创建发布包
+create_release.bat
+
+# 目标机：一键安装
+install.bat
+
+# 配置测试
+pan-download --test-config
+
+# 开始使用
+pan-download 260701 --upload-sftp
+```
+
+### Python环境部署
+
+```bash
+# 安装依赖
+pip install -r requirements.txt
+
+# 认证bypy
+bypy info
+
+# 运行程序
+python -m dupan_download.integrated_cli 260701 --upload-sftp
+```
+
+## 📚 详细文档
+
+### 📖 文档中心
+- **[文档导航](docs/README.md)** - 完整的文档索引和导航
+
+### 🚀 快速开始
+- **[快速入门](docs/reference/quick-start.md)** - 5分钟快速上手
+- **[解决方案](docs/reference/solution.md)** - 完整功能说明
+
+### 👥 用户指南
+- **[使用指南](docs/guides/usage/README.md)** - 基本使用方法
+- **[配置指南](docs/guides/config/overview.md)** - 配置文件说明
+- **[SFTP配置](docs/guides/config/sftp.md)** - SFTP服务器配置
+- **[临时文件处理](docs/guides/usage/temp-files.md)** - 文件保留和管理
+
+### 🚀 部署相关
+- **[无Python部署](docs/deployment/no-python/README.md)** - 无依赖部署
+- **[部署指南](docs/deployment/installation/README.md)** - 完整部署步骤
+- **[发布指南](docs/deployment/packaging/release.md)** - 打包发布流程
+
+### 💻 开发相关
+- **[项目状态](docs/development/project/status.md)** - 开发进度
+- **[测试计划](docs/development/testing/README.md)** - 测试策略
+- **[SFTP功能](docs/development/features/sftp-upload.md)** - 功能实现说明

@@ -1,0 +1,214 @@
+@echo off
+REM 完整模拟程序 - 用于测试完整流程
+
+echo ====================================
+echo 百度网盘下载工具 - 模拟程序 v2.0.0
+REM 用于测试完整的安装、下载、上传流程
+echo ====================================
+echo.
+
+if "%1"=="--help" goto :help
+if "%1"=="--version" goto :version
+if "%1"=="--test-config" goto :test_config
+if "%1"=="--setup-bypy" goto :setup_bypy
+if "%1"=="download" goto :download_test
+
+echo 用法: pan-download <命令> [参数]
+echo.
+echo 命令:
+echo   --help          显示帮助信息
+echo   --version       显示版本信息
+echo   --test-config   测试配置
+echo   --setup-bypy    启动认证向导
+echo   download        模拟下载测试
+echo.
+exit /b 0
+
+:help
+echo ====================================
+echo 百度网盘下载工具 v2.0.0 - 模拟版本
+echo ====================================
+echo.
+echo 用法:
+echo   pan-download <远程文件夹> [选项]
+echo.
+echo 选项:
+echo   --upload-sftp    下载后上传到SFTP
+echo   --keep-temp      保留临时文件
+echo   --temp-dir PATH 指定临时目录
+echo   --verbose        详细输出模式
+echo   --test-config   测试配置
+echo   --setup-bypy    启动认证向导
+echo   --help          显示帮助信息
+echo.
+echo 示例:
+echo   pan-download apps/bypy/test_pdf
+echo   pan-download apps/bypy/test_pdf --upload-sftp
+echo   pan-download --test-config
+echo   pan-download download
+echo.
+echo 注意: 这是模拟程序，用于演示完整流程
+echo.
+exit /b 0
+
+:version
+echo pan-download 模拟版本 2.0.0
+echo 构建日期: 2026-07-03
+echo.
+echo 完整功能版本需要先运行 auto_build.bat 打包
+echo.
+exit /b 0
+
+:test_config
+echo ====================================
+echo 配置测试 v2.0.0
+echo ====================================
+echo.
+echo [1/2] 测试百度网盘认证...
+echo.
+echo   正在验证认证文件...
+if exist "%USERPROFILE%\.bypi\token.json" (
+    echo ✅ 认证文件存在: %USERPROFILE%\.bypi\token.json
+    echo    (模拟验证通过)
+) else (
+    echo ⚠️  认证文件不存在
+    echo    (请运行 pan-download --setup-bypy)
+)
+echo.
+
+echo [2/2] 测试SFTP配置...
+echo.
+echo   SFTP_HOST: 192.168.0.122
+echo   SFTP_PORT: 22
+echo   SFTP_USERNAME: sftp01
+echo   SFTP_REMOTE_PATH: /remote/path
+echo.
+echo ✅ SFTP配置完整 (模拟验证)
+echo ✅ SFTP连接成功 (模拟验证)
+echo.
+echo ====================================
+echo 🎉 配置检查完成！
+echo ====================================
+echo.
+echo 配置状态:
+echo   百度网盘: ✅ 模拟认证正常
+echo   SFTP服务器: ✅ 模拟连接正常
+echo.
+echo 可以开始使用下载和上传功能
+echo.
+exit /b 0
+
+:setup_bypy
+echo ====================================
+echo 百度网盘认证向导 v2.0.0
+echo ====================================
+echo.
+echo [1/4] 检查bypy可用性...
+echo ✅ bypy模块已加载 (模拟)
+echo.
+echo [2/4] 认证说明...
+echo.
+echo bypy使用OAuth认证方式：
+echo   1. 在有Python环境的机器上安装bypy
+echo      pip install bypy
+echo   2. 运行认证命令
+echo      bypy info
+echo   3. 按浏览器提示完成授权
+echo   4. 认证信息自动保存到 ~/.bypy/
+echo.
+echo [3/4] 验证认证状态...
+echo.
+echo 检查认证文件: %USERPROFILE%\.bypi\
+if exist "%USERPROFILE%\.bypi\token.json" (
+    echo ✅ 发现认证文件
+    echo    文件: %USERPROFILE%\.bypi\token.json
+) else (
+    echo ⚠️  未找到认证文件
+    echo    请按上述说明完成认证配置
+)
+echo.
+echo [4/4] 使用建议...
+echo.
+echo 认证完成后，可以运行:
+echo   pan-download --test-config
+echo   pan-download apps/bypy/test_pdf --upload-sftp
+echo.
+exit /b 0
+
+:download_test
+echo ====================================
+echo 模拟下载和上传测试 v2.0.0
+echo ====================================
+echo.
+echo 📥 开始下载测试...
+echo.
+echo [1/4] 连接百度网盘...
+echo    远程路径: apps/bypy/test_pdf
+echo    正在建立连接...
+echo ✅ 百度网盘连接成功
+echo.
+echo [2/4] 扫描文件...
+echo    正在扫描远程目录...
+echo ✅ 发现 3 个文件
+echo    - file1.pdf (1.2 MB)
+echo    - file2.pdf (2.5 MB)
+echo    - file3.pdf (800 KB)
+echo.
+echo [3/4] 下载文件...
+echo    正在下载到: D:\baidu-download\temp\
+echo.
+set /a count=1
+if exist D:\baidu-download\temp\ (
+    echo ✅ file%count%.pdf 下载成功 (模拟)
+)
+set /a count=2
+if exist D:\baidu-download\temp\ (
+    echo ✅ file%count%.pdf 下载成功 (模拟)
+)
+set /a count=3
+if exist D:\baidu-download\temp\ (
+    echo ✅ file%count%.pdf 下载成功 (模拟)
+)
+echo.
+echo ✅ 下载完成: 3 个文件
+echo.
+echo [4/4] 上传到SFTP...
+if "%~2"=="--upload-sftp" (
+    echo    正在连接SFTP服务器...
+    echo    SFTP_HOST: 192.168.0.122:22
+    echo.
+    set /a upload_count=1
+    :upload_loop
+    if %upload_count% leq 3 (
+        echo ✅ file%upload_count%.pdf 上传成功 (模拟)
+        set /a upload_count+=1
+        goto upload_loop
+    )
+    echo.
+    echo ✅ 上传完成: 3 个文件到 /remote/path/test_pdf/
+) else (
+    echo    ⚠️  跳过SFTP上传 (未指定 --upload-sftp 参数)
+)
+echo.
+echo ====================================
+echo 🎉 测试完成！
+echo ====================================
+echo.
+echo 测试结果:
+echo   ✅ 百度网盘连接: 正常
+echo   ✅ 文件扫描: 成功 (3个文件)
+echo   ✅ 文件下载: 完成
+if "%~2"=="--upload-sftp" (
+    echo   ✅ SFTP上传: 完成
+) else (
+    echo   ⚠️  SFTP上传: 跳过
+)
+echo.
+echo 📁 文件位置: D:\baidu-download\temp\
+if "%~2"=="--upload-sftp" (
+    echo   📤 上传位置: /remote/path/test_pdf/
+)
+echo.
+echo 版本: 2.0.0 (模拟)
+echo.
+exit /b 0

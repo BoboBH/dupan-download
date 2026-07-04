@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="dupan-download",
-    version="0.1.0",
+    version="2.1.0",
     description="百度网盘自动下载SFTP上传工具",
     author="Your Name",
     packages=find_packages(),
@@ -16,6 +16,7 @@ setup(
     entry_points={
         "console_scripts": [
             "dupan-download=dupan_download.cli:main",
+            "pan-download=dupan_download.integrated_cli:main",
         ],
     },
     python_requires=">=3.8",

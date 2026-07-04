@@ -27,38 +27,6 @@ class Config:
             load_dotenv(dotenv_path=env_path)
 
     @property
-    def baidu_app_id(self) -> str:
-        """百度应用ID"""
-        value = os.getenv('BAIDU_APP_ID')
-        if not value:
-            raise ValueError("缺少必需的配置: BAIDU_APP_ID")
-        return value
-
-    @property
-    def baidu_app_key(self) -> str:
-        """百度应用密钥"""
-        value = os.getenv('BAIDU_APP_KEY')
-        if not value:
-            raise ValueError("缺少必需的配置: BAIDU_APP_KEY")
-        return value
-
-    @property
-    def baidu_secret_key(self) -> str:
-        """百度应用密钥"""
-        value = os.getenv('BAIDU_SECRET_KEY')
-        if not value:
-            raise ValueError("缺少必需的配置: BAIDU_SECRET_KEY")
-        return value
-
-    @property
-    def baidu_access_token(self) -> str:
-        """百度访问令牌"""
-        value = os.getenv('BAIDU_ACCESS_TOKEN')
-        if not value:
-            raise ValueError("缺少必需的配置: BAIDU_ACCESS_TOKEN")
-        return value
-
-    @property
     def sftp_host(self) -> str:
         """SFTP主机地址"""
         value = os.getenv('SFTP_HOST')

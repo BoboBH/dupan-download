@@ -1,0 +1,66 @@
+@echo off
+REM 临时模拟程序 - 用于测试安装脚本
+
+echo 这是一个临时模拟的 pan-download.exe
+echo 用于测试安装脚本是否正常工作
+echo.
+echo 用法:
+echo   --help          显示此帮助信息
+echo   --test-config   测试配置
+echo   --version       显示版本信息
+echo.
+
+if "%1"=="--help" (
+    echo ====================================
+    echo 百度网盘下载工具 - 模拟版本
+    echo ====================================
+    echo.
+    echo 用法:
+    echo   pan-download <远程文件夹> [选项]
+    echo.
+    echo 选项:
+    echo   --upload-sftp    下载后上传到SFTP
+    echo   --keep-temp      保留临时文件
+    echo   --temp-dir PATH 指定临时目录
+    echo   --verbose        详细输出模式
+    echo   --test-config   测试配置
+    echo   --setup-bypy    启动认证向导
+    echo   --help          显示帮助信息
+    echo.
+    echo 示例:
+    echo   pan-download apps/bypy/test_pdf
+    echo   pan-download apps/bypy/test_pdf --upload-sftp
+    echo   pan-download --test-config
+    echo.
+    echo 注意: 这是模拟程序，仅用于测试安装脚本
+    exit /b 0
+)
+
+if "%1"=="--version" (
+    echo pan-download 模拟版本 1.0.0
+    echo.
+    echo 注意: 这是模拟程序，仅用于测试安装脚本
+    exit /b 0
+)
+
+if "%1"=="--test-config" (
+    echo ====================================
+    echo 配置测试 - 模拟版本
+    echo ====================================
+    echo.
+    echo 1. 测试bypy配置...
+    echo ✅ bypy配置正常 (模拟)
+    echo.
+    echo 2. 测试SFTP配置...
+    echo ✅ SFTP配置完整 (模拟)
+    echo ✅ SFTP连接成功 (模拟)
+    echo.
+    echo ====================================
+    echo 🎉 所有配置检查通过！可以开始使用。
+    echo ====================================
+    exit /b 0
+)
+
+echo 模拟程序已运行
+echo 参数: %1
+exit /b 0
