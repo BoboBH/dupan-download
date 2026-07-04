@@ -8,6 +8,7 @@ from typing import Optional
 
 from .config import get_config
 from .uploader import SFTPUploader
+from .transfer import BaiduTransfer
 from .utils import create_temp_dir, cleanup_temp_dir, setup_logger
 
 # 尝试导入bypy
@@ -21,7 +22,8 @@ except ImportError:
 
 
 @click.command()
-@click.argument('remote_folder', required=False)
+@click.argument('share_link', required=False)
+@click.argument('extract_code', required=False)
 @click.option('--local-dir', type=click.Path(), help='本地下载目录（默认为临时目录）')
 @click.option('--upload-sftp', is_flag=True, help='下载后自动上传到SFTP服务器')
 @click.option('--keep-temp', is_flag=True, help='保留临时文件，不自动清理')
@@ -30,26 +32,25 @@ except ImportError:
 @click.option('--setup-bypy', is_flag=True, help='启动bypy认证向导')
 @click.option('--test-config', is_flag=True, help='测试配置是否正确')
 @click.option('--streaming', is_flag=True, help='启用流式处理模式：下载一个文件后立即上传，自动创建SFTP目录')
-def main(remote_folder: Optional[str], local_dir: Optional[Path], upload_sftp: bool,
+def main(share_link: Optional[str], extract_code: Optional[str], local_dir: Optional[Path], upload_sftp: bool,
          keep_temp: bool, temp_dir: Optional[str], verbose: bool, setup_bypy: bool, test_config: bool, streaming: bool):
     """
     百度网盘下载和SFTP上传工具
 
     示例:
-        # 只下载
+        # 传统模式：直接指定百度网盘路径
         pan-download apps/bypy/260701
-
-        # 下载并上传到SFTP
         pan-download apps/bypy/260701 --upload-sftp
 
+        # 转存模式：分享链接 + 提取码（推荐）
+        pan-download https://pan.baidu.com/s/1Fi2LAxr441x57Kk4B6ws2Q 0409 --upload-sftp --streaming
+
         # 指定本地目录
-        pan-download apps/bupy/260701 --local-dir "D:\我的文件"
+        pan-download apps/bypy/260701 --local-dir "D:\我的文件"
 
-        # 保留临时文件在默认位置
+        # 保留临时文件
         pan-download apps/bypy/260701 --keep-temp
-
-        # 保留临时文件到指定位置
-        pan-download apps/bypy/260701 --keep-temp --temp-dir "C:\MyDownloads"
+        pan-download https://pan.baidu.com/s/1Fi2LAxr441x57Kk4B6ws2Q 0409 --upload-sftp --streaming --keep-temp
 
         # 启动认证向导
         pan-download --setup-bypy
@@ -68,16 +69,59 @@ def main(remote_folder: Optional[str], local_dir: Optional[Path], upload_sftp: b
         return test_configuration()
 
     try:
-        # 验证远程路径
-        if not remote_folder:
-            logger.error("远程文件夹路径不能为空")
-            sys.exit(1)
+        # 判断模式：转存模式 vs 传统模式
+        is_transfer_mode = share_link and extract_code and 'pan.baidu.com' in share_link
 
-        # bypy使用相对路径，不需要apps/bypy前缀
-        if remote_folder.startswith('apps/bypy/'):
-            # 自动移除apps/bypy前缀
-            remote_folder = remote_folder.replace('apps/bypy/', '')
-            logger.info(f"自动调整路径为: {remote_folder}")
+        # 转存模式：分享链接 + 提取码
+        if is_transfer_mode:
+            logger.info("=" * 60)
+            logger.info("检测到转存模式：分享链接 + 提取码")
+            logger.info("=" * 60)
+            logger.info(f"分享链接: {share_link}")
+            logger.info(f"提取码: {extract_code}")
+
+            # 执行转存
+            from .transfer import BaiduTransfer
+
+            transfer = BaiduTransfer()
+
+            # 从分享链接中推断目标文件夹名
+            # 例如：链接中有270703文件夹，转存到apps/bypy/260703
+            source_folder_name = transfer.extract_folder_name_from_link(share_link)
+            if not source_folder_name:
+                logger.error("无法从链接中推断目标文件夹名")
+                sys.exit(1)
+
+            target_folder = f"apps/bypy/{source_folder_name}"
+            logger.info(f"推断目标文件夹: {target_folder}")
+
+            # 执行转存
+            transfer_result = transfer.transfer_to_own_drive(
+                share_link, extract_code, target_folder
+            )
+
+            if not transfer_result.success:
+                logger.error(f"转存失败: {transfer_result.error}")
+                sys.exit(1)
+
+            logger.info(f"✅ 转存成功: {transfer_result.source_folder} -> {transfer_result.target_folder}")
+            logger.info(f"转存文件数: {transfer_result.files_count}")
+
+            # 设置远程路径为转存后的路径
+            remote_folder = target_folder
+
+        else:
+            # 传统模式：直接指定远程路径
+            if not share_link:
+                logger.error("请提供远程文件夹路径或分享链接")
+                sys.exit(1)
+            remote_folder = share_link
+
+            # bypy使用相对路径，不需要apps/bypy前缀
+            if remote_folder.startswith('apps/bypy/'):
+                # 自动移除apps/bypy前缀
+                remote_folder = remote_folder.replace('apps/bypy/', '')
+                logger.info(f"自动调整路径为: {remote_folder}")
 
         # 创建本地目录
         if local_dir:
