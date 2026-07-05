@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import os
 from .config import get_config
+from .utils import sanitize_filename, ensure_path_safe
 
 
 @dataclass
@@ -181,6 +182,9 @@ class BaiduDownloader:
             self.logger.info(f"🔽 开始下载: {remote_path}")
             self.logger.info(f"   目标位置: {local_path}")
 
+            # 确保路径安全（防止路径过长）
+            local_path = ensure_path_safe(local_path)
+
             # 创建本地目录
             local_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -294,7 +298,13 @@ class BaiduDownloader:
             for file_info in files_info:
                 file_name = file_info.get('filename')
                 file_remote_path = file_info.get('path')
-                file_local_path = local_path / file_name
+
+                # 清理文件名以避免路径长度限制
+                safe_filename = sanitize_filename(file_name)
+                file_local_path = local_path / safe_filename
+
+                # 确保完整路径在安全长度内
+                file_local_path = ensure_path_safe(file_local_path)
 
                 result = self.download_file(file_remote_path, file_local_path)
                 results.append(result)

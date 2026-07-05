@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from bypy import ByPy
 from .uploader import SFTPUploader
 from .config import get_config
+from .utils import sanitize_filename, ensure_path_safe
 
 
 @dataclass
@@ -340,7 +341,26 @@ class StreamingProcessor:
                 try:
                     # 计算相对路径
                     relative_path = local_file.relative_to(local_temp_dir)
+
+                    # 清理文件名以避免路径长度限制
+                    safe_filename = sanitize_filename(local_file.name)
+                    safe_local_file = local_file.parent / safe_filename
+
+                    # 如果文件名被改变，重命名文件
+                    if safe_local_file != local_file:
+                        if safe_local_file.exists():
+                            # 目标文件已存在，删除原文件
+                            local_file.unlink()
+                            local_file = safe_local_file
+                        else:
+                            # 重命名文件
+                            local_file.rename(safe_local_file)
+                            local_file = safe_local_file
+
                     file_size = local_file.stat().st_size
+
+                    # 重新计算相对路径（使用清理后的文件名）
+                    relative_path = local_file.relative_to(local_temp_dir)
 
                     # 构建SFTP目标路径
                     sftp_target = f"{sftp_base_path}/{relative_path}".replace('\\', '/') if sftp_base_path else None

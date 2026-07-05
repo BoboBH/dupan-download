@@ -9,6 +9,7 @@ import os
 import json
 import time
 from .config import get_config
+from .utils import sanitize_filename, ensure_path_safe
 
 
 @dataclass
@@ -211,23 +212,30 @@ class ShareLinkDownloader:
         try:
             self.logger.info(f"下载文件: {filename} -> {local_path}")
 
+            # 清理文件名以避免路径长度限制
+            safe_filename = sanitize_filename(filename)
+            safe_local_path = local_path / safe_filename
+
+            # 确保完整路径在安全长度内
+            safe_local_path = ensure_path_safe(safe_local_path)
+
             # 创建本地目录
-            local_path.parent.mkdir(parents=True, exist_ok=True)
+            safe_local_path.parent.mkdir(parents=True, exist_ok=True)
 
             # 下载文件
             response = self.session.get(file_url, stream=True, timeout=self.transfer_timeout)
             if response.status_code == 200:
                 total_size = 0
-                with open(local_path, 'wb') as f:
+                with open(safe_local_path, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:
                             f.write(chunk)
                             total_size += len(chunk)
 
-                self.logger.info(f"文件下载成功: {local_path} ({total_size} bytes)")
+                self.logger.info(f"文件下载成功: {safe_local_path} ({total_size} bytes)")
                 return DownloadResult(
                     success=True,
-                    local_path=str(local_path),
+                    local_path=str(safe_local_path),
                     remote_path=filename,
                     size=total_size
                 )
@@ -278,7 +286,12 @@ class ShareLinkDownloader:
                     # 跳过目录
                     continue
 
-                file_local_path = local_path / filename
+                # 清理文件名以避免路径长度限制
+                safe_filename = sanitize_filename(filename)
+                file_local_path = local_path / safe_filename
+
+                # 确保完整路径在安全长度内
+                file_local_path = ensure_path_safe(file_local_path)
 
                 # 这里需要获取实际的下载链接
                 # 由于API限制，暂时跳过实际下载

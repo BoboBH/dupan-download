@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 from pathlib import Path
 from .config import get_config
+from .utils import sanitize_filename, ensure_path_safe
 
 
 @dataclass
@@ -181,6 +182,9 @@ class SFTPUploader:
             上传结果
         """
         try:
+            # 确保本地路径安全
+            local_path = ensure_path_safe(local_path)
+
             # 获取文件大小
             file_size = local_path.stat().st_size
 
@@ -384,7 +388,13 @@ class SFTPUploader:
                 if local_file.is_file():
                     # 计算相对路径
                     relative_path = local_file.relative_to(local_path)
-                    remote_file_path = f"{remote_path}/{relative_path}".replace('\\', '/')
+
+                    # 清理文件名以避免路径长度限制（针对SFTP远程路径）
+                    safe_filename = sanitize_filename(local_file.name)
+                    safe_relative_path = relative_path.parent / safe_filename
+
+                    # 构建远程文件路径
+                    remote_file_path = f"{remote_path}/{safe_relative_path}".replace('\\', '/')
 
                     # 上传文件
                     result = self.upload_file(local_file, remote_file_path)
