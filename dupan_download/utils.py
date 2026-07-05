@@ -1,4 +1,4 @@
-"""工具函数模块"""
+"""工具函数模块 - 极简路径版本"""
 import os
 import logging
 import tempfile
@@ -11,10 +11,10 @@ from tqdm import tqdm
 
 def create_temp_dir(base_dir: Optional[str] = None) -> Path:
     """
-    创建临时目录
+    创建临时目录 - 使用极简根目录策略
 
-    优化临时目录名称长度，为长文件名预留更多路径空间。
-    使用更短的目录名前缀和更短的PID后缀。
+    使用 d:\a, d:\b 等极短路径为长文件名预留最大空间。
+    相比传统路径节省40+字符。
 
     Args:
         base_dir: 基础目录，如果为None则使用系统默认临时目录
@@ -22,19 +22,30 @@ def create_temp_dir(base_dir: Optional[str] = None) -> Path:
     Returns:
         临时目录路径
     """
-    if base_dir:
-        base = Path(base_dir)
-        base.mkdir(parents=True, exist_ok=True)
-        # 使用极短的目录名，最大程度为长文件名预留空间
-        # 仅使用PID的后4位数字来缩短目录名
-        pid_suffix = str(os.getpid())[-4:]  # 取PID最后4位
-        temp_dir = base / f"dl_{pid_suffix}"
-    else:
-        # 使用更短的前缀和更短的PID后缀
-        pid_suffix = str(os.getpid())[-4:]  # 取PID最后4位
-        temp_dir = Path(tempfile.mkdtemp(prefix=f"dl_{pid_suffix}_"))
+    logger = logging.getLogger(__name__)
 
+    # 使用极简的根目录策略
+    base_drive = Path("d:\\")  # 使用D盘根目录
+
+    # 尝试使用 d:\a, d:\b, d:\c 等极短路径
+    for letter in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']:
+        ultra_short_path = base_drive / letter
+        try:
+            ultra_short_path.mkdir(exist_ok=True)
+            # 验证我们可以在该目录创建文件
+            test_file = ultra_short_path / f"test_{os.getpid()}.tmp"
+            test_file.write_text("test")
+            test_file.unlink()
+            logger.info(f"使用极简临时目录: {ultra_short_path}")
+            return ultra_short_path
+        except Exception as e:
+            logger.debug(f"路径 {ultra_short_path} 不可用: {e}")
+            continue
+
+    # 如果所有极简路径都失败，使用备用方案
+    temp_dir = base_drive / "dl_temp"
     temp_dir.mkdir(parents=True, exist_ok=True)
+    logger.warning(f"极简路径不可用，使用备用临时目录: {temp_dir}")
     return temp_dir
 
 
@@ -184,26 +195,32 @@ def ensure_path_safe(file_path: Path, max_total_length: int = 250) -> Path:
         >>> ensure_path_safe(Path("/very/long/path/very_long_filename.pdf"))
         Path("/very/long/path/truncated_filename.pdf")
     """
-    path_str = str(file_path)
+    try:
+        path_str = str(file_path)
 
-    if len(path_str) <= max_total_length:
+        if len(path_str) <= max_total_length:
+            return file_path
+
+        # 路径太长，需要缩短文件名
+        # 获取父目录
+        parent = file_path.parent
+
+        # 清理文件名以避免路径长度限制
+        safe_filename = sanitize_filename(file_path.name)
+
+        # 计算文件名可用长度
+        max_filename_length = max_total_length - len(str(parent)) - 1  # -1 for path separator
+
+        if max_filename_length < 10:  # 文件名至少10个字符
+            # 如果路径本身太长，返回原始路径（让系统报错）
+            return file_path
+
+        # 清理文件名
+        if len(safe_filename) > max_filename_length:
+            safe_filename = safe_filename[:max_filename_length]
+
+        return parent / safe_filename
+
+    except Exception as e:
+        # 如果出错，返回原始路径
         return file_path
-
-    # 路径太长，需要缩短文件名
-    parent = file_path.parent
-    filename = file_path.name
-
-    # 计算路径长度（不含文件名）
-    parent_str = str(parent)
-    path_length = len(parent_str) + 1  # +1 for path separator
-
-    # 计算文件名可用长度
-    max_filename_length = max_total_length - path_length
-
-    if max_filename_length < 10:  # 文件名至少10个字符
-        # 如果路径本身太长，返回原始路径（让系统报错）
-        return file_path
-
-    # 清理文件名
-    safe_filename = sanitize_filename(filename, max_filename_length)
-    return parent / safe_filename
