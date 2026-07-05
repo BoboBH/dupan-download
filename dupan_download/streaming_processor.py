@@ -297,6 +297,28 @@ class StreamingProcessor:
             if local_temp_dir.exists():
                 existing_local_files = [f for f in local_temp_dir.rglob('*') if f.is_file()]
 
+            # 如果没有已有文件，计算预计路径长度，如果太长则使用更短的临时目录
+            if not existing_local_files:
+                self.logger.info("检查路径长度限制...")
+
+                # 估算最长文件名（使用用户报告的长文件名作为参考）
+                max_estimated_filename_length = 250  # 预留最大文件名长度
+                estimated_path_length = len(str(local_temp_dir)) + max_estimated_filename_length
+
+                self.logger.info(f"预计路径长度: {estimated_path_length} 字符")
+
+                # 如果预计路径长度超过250字符，使用更短的临时目录
+                if estimated_path_length > 250:
+                    self.logger.warning("⚠️  检测到路径可能过长，使用更短的临时目录")
+
+                    # 创建更短的临时目录
+                    import tempfile
+                    short_temp_dir = Path(tempfile.gettempdir()) / f"dld_{os.getpid()}"
+                    short_temp_dir.mkdir(parents=True, exist_ok=True)
+
+                    self.logger.info(f"使用短路径临时目录: {short_temp_dir}")
+                    local_temp_dir = short_temp_dir
+
             if existing_local_files:
                 self.logger.info(f"📁 发现本地已有 {len(existing_local_files)} 个文件，跳过百度网盘下载")
                 self._notify_progress(f"跳过下载（本地已有 {len(existing_local_files)} 个文件）")
@@ -312,6 +334,34 @@ class StreamingProcessor:
                     self.logger.info("正在调用bypy下载...")
                     self.byp.download(remote_folder, str(local_temp_dir))
                     self.logger.info("✅ 百度网盘下载完成")
+
+                    # 立即清理过长文件名（bypy下载后的关键步骤）
+                    self.logger.info("正在清理过长文件名...")
+                    local_files = list(local_temp_dir.rglob('*'))
+                    local_files = [f for f in local_files if f.is_file()]
+
+                    renamed_count = 0
+                    for file in local_files:
+                        try:
+                            # 清理文件名
+                            safe_filename = sanitize_filename(file.name)
+                            safe_file = file.parent / safe_filename
+
+                            # 如果文件名被改变，重命名文件
+                            if safe_file != file:
+                                if safe_file.exists():
+                                    # 目标文件已存在，删除原文件
+                                    file.unlink()
+                                    renamed_count += 1
+                                else:
+                                    # 重命名文件
+                                    file.rename(safe_file)
+                                    renamed_count += 1
+                        except Exception as rename_error:
+                            self.logger.warning(f"重命名文件失败 {file.name}: {rename_error}")
+
+                    if renamed_count > 0:
+                        self.logger.info(f"✅ 已清理 {renamed_count} 个过长文件名")
 
                 except PermissionError as e:
                     error_reason = f"下载权限错误: {e}"
@@ -329,7 +379,7 @@ class StreamingProcessor:
                     self.logger.error(f"❌ 下载失败: {error_reason}")
                     return result
 
-                # 获取下载的文件列表
+                # 获取下载的文件列表（重新获取，因为文件名可能已改变）
                 local_files = list(local_temp_dir.rglob('*'))
                 local_files = [f for f in local_files if f.is_file()]
 

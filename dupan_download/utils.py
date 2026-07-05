@@ -13,6 +13,8 @@ def create_temp_dir(base_dir: Optional[str] = None) -> Path:
     """
     创建临时目录
 
+    优化临时目录名称长度，为长文件名预留更多路径空间。
+
     Args:
         base_dir: 基础目录，如果为None则使用系统默认临时目录
 
@@ -22,9 +24,11 @@ def create_temp_dir(base_dir: Optional[str] = None) -> Path:
     if base_dir:
         base = Path(base_dir)
         base.mkdir(parents=True, exist_ok=True)
-        temp_dir = base / f"dupan_download_{os.getpid()}"
+        # 使用更短的目录名前缀，为长文件名预留空间
+        temp_dir = base / f"dld_{os.getpid()}"
     else:
-        temp_dir = Path(tempfile.mkdtemp(prefix="dupan_download_"))
+        # 使用更短的前缀
+        temp_dir = Path(tempfile.mkdtemp(prefix="dld_"))
 
     temp_dir.mkdir(parents=True, exist_ok=True)
     return temp_dir

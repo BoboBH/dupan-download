@@ -395,12 +395,47 @@ def download_folder(remote_folder: str, local_path: Path):
 
         # 下载文件
         logger.info(f"开始下载到: {local_path}")
+
+        # 检查路径长度，如果可能过长则使用更短的临时目录
+        estimated_path_length = len(str(local_path)) + 250  # 预留最大文件名长度
+        if estimated_path_length > 260:
+            logger.warning(f"⚠️  检测到路径可能过长 ({estimated_path_length} 字符)，使用更短的临时目录")
+            import tempfile
+            short_local_path = Path(tempfile.gettempdir()) / f"dld_{os.getpid()}"
+            short_local_path.mkdir(parents=True, exist_ok=True)
+            logger.info(f"使用短路径: {short_local_path}")
+            local_path = short_local_path
+
         local_path.mkdir(parents=True, exist_ok=True)
 
         # 使用bypy的download方法
         try:
             result = byp.download(remote_folder, str(local_path))
             logger.info(f"bypy下载完成")
+
+            # 下载后立即清理过长文件名
+            logger.info("正在清理过长文件名...")
+            from .utils import sanitize_filename
+            renamed_count = 0
+
+            for file in local_path.rglob('*'):
+                if file.is_file():
+                    try:
+                        safe_filename = sanitize_filename(file.name)
+                        safe_file = file.parent / safe_filename
+
+                        if safe_file != file:
+                            if safe_file.exists():
+                                file.unlink()
+                            else:
+                                file.rename(safe_file)
+                            renamed_count += 1
+                    except Exception as e:
+                        logger.warning(f"重命名文件失败 {file.name}: {e}")
+
+            if renamed_count > 0:
+                logger.info(f"✅ 已清理 {renamed_count} 个过长文件名")
+
             # 创建下载结果
             return create_download_result(local_path, True, "所有文件")
         except Exception as e:
