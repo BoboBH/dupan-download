@@ -14,6 +14,7 @@ def create_temp_dir(base_dir: Optional[str] = None) -> Path:
     创建临时目录
 
     优化临时目录名称长度，为长文件名预留更多路径空间。
+    使用更短的目录名前缀和更短的PID后缀。
 
     Args:
         base_dir: 基础目录，如果为None则使用系统默认临时目录
@@ -24,11 +25,14 @@ def create_temp_dir(base_dir: Optional[str] = None) -> Path:
     if base_dir:
         base = Path(base_dir)
         base.mkdir(parents=True, exist_ok=True)
-        # 使用更短的目录名前缀，为长文件名预留空间
-        temp_dir = base / f"dld_{os.getpid()}"
+        # 使用极短的目录名，最大程度为长文件名预留空间
+        # 仅使用PID的后4位数字来缩短目录名
+        pid_suffix = str(os.getpid())[-4:]  # 取PID最后4位
+        temp_dir = base / f"dl_{pid_suffix}"
     else:
-        # 使用更短的前缀
-        temp_dir = Path(tempfile.mkdtemp(prefix="dld_"))
+        # 使用更短的前缀和更短的PID后缀
+        pid_suffix = str(os.getpid())[-4:]  # 取PID最后4位
+        temp_dir = Path(tempfile.mkdtemp(prefix=f"dl_{pid_suffix}_"))
 
     temp_dir.mkdir(parents=True, exist_ok=True)
     return temp_dir

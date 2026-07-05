@@ -396,25 +396,100 @@ def download_folder(remote_folder: str, local_path: Path):
         # 下载文件
         logger.info(f"开始下载到: {local_path}")
 
-        # 检查路径长度，如果可能过长则使用更短的临时目录
-        estimated_path_length = len(str(local_path)) + 250  # 预留最大文件名长度
-        if estimated_path_length > 260:
-            logger.warning(f"⚠️  检测到路径可能过长 ({estimated_path_length} 字符)，使用更短的临时目录")
+        # 检查路径长度，使用更激进的策略
+        # 针对用户报告的长文件名问题，直接使用系统临时目录的极短路径
+        max_safe_filename_length = 200  # 文件名最大安全长度
+        estimated_path_length = len(str(local_path)) + max_safe_filename_length
+
+        # 如果预计路径超过250字符，强制使用更短的临时目录
+        if estimated_path_length > 250:
+            logger.warning(f"⚠️  检测到路径可能过长 ({estimated_path_length} 字符)")
+            logger.warning(f"强制使用系统临时目录的极短路径")
+
+            # 使用系统临时目录，但创建极短的子目录名
             import tempfile
-            short_local_path = Path(tempfile.gettempdir()) / f"dld_{os.getpid()}"
-            short_local_path.mkdir(parents=True, exist_ok=True)
-            logger.info(f"使用短路径: {short_local_path}")
-            local_path = short_local_path
+            pid_suffix = str(os.getpid())[-3:]  # 仅使用PID后3位
+            ultra_short_path = Path(tempfile.gettempdir()) / f"dl_{pid_suffix}"
+            ultra_short_path.mkdir(parents=True, exist_ok=True)
+
+            logger.info(f"使用极短路径: {ultra_short_path}")
+            logger.info(f"极短路径长度: {len(str(ultra_short_path))} 字符")
+
+            # 计算新路径的预计长度
+            new_estimated_length = len(str(ultra_short_path)) + max_safe_filename_length
+            logger.info(f"新路径预计长度: {new_estimated_length} 字符")
+
+            if new_estimated_length <= 260:
+                local_path = ultra_short_path
+                logger.info("✅ 路径长度现在在安全范围内")
+            else:
+                logger.error("❌ 即使使用极短路径，仍然可能超过限制")
+                # 尝试使用更短的方案
+                local_path = ultra_short_path  # 无论如何都使用短路径
 
         local_path.mkdir(parents=True, exist_ok=True)
 
-        # 使用bypy的download方法
+        # 使用bypy的download方法，并实施实时文件名监控
         try:
+            # 启动一个后台线程来监控和处理长文件名
+            import threading
+            import time
+
+            def monitor_and_rename_files():
+                """后台线程：实时监控并重命名过长文件名"""
+                time.sleep(2)  # 等待bypy开始下载
+                max_attempts = 60  # 最多监控60次（10分钟）
+                processed_files = set()
+
+                for attempt in range(max_attempts):
+                    try:
+                        # 扫描当前目录中的文件
+                        current_files = list(local_path.rglob('*'))
+                        current_files = [f for f in current_files if f.is_file()]
+
+                        for file in current_files:
+                            if file.name not in processed_files and len(file.name) > 200:
+                                try:
+                                    # 立即重命名过长文件名
+                                    safe_filename = sanitize_filename(file.name)
+                                    safe_file = file.parent / safe_filename
+
+                                    if safe_file != file:
+                                        logger.info(f"🔄 发现过长文件名，立即重命名: {file.name[:50]}...")
+                                        if safe_file.exists():
+                                            # 目标文件已存在，删除源文件
+                                            file.unlink()
+                                            logger.info(f"   删除重复文件")
+                                        else:
+                                            # 重命名文件
+                                            file.rename(safe_file)
+                                            logger.info(f"   重命名为: {safe_filename[:50]}...")
+
+                                        processed_files.add(file.name)
+                                        processed_files.add(safe_filename)
+
+                                except Exception as rename_error:
+                                    logger.warning(f"实时重命名失败 {file.name}: {rename_error}")
+
+                        time.sleep(10)  # 每10秒检查一次
+
+                    except Exception as e:
+                        logger.debug(f"监控过程出错: {e}")
+                        time.sleep(5)
+
+            # 启动监控线程
+            monitor_thread = threading.Thread(target=monitor_and_rename_files, daemon=True)
+            monitor_thread.start()
+
+            # 执行bypy下载
             result = byp.download(remote_folder, str(local_path))
             logger.info(f"bypy下载完成")
 
-            # 下载后立即清理过长文件名
-            logger.info("正在清理过长文件名...")
+            # 等待监控线程完成处理
+            time.sleep(3)
+
+            # 最终清理：再次扫描并清理所有过长文件名
+            logger.info("执行最终文件名清理...")
             from .utils import sanitize_filename
             renamed_count = 0
 
@@ -430,11 +505,12 @@ def download_folder(remote_folder: str, local_path: Path):
                             else:
                                 file.rename(safe_file)
                             renamed_count += 1
+                            logger.info(f"重命名: {file.name[:50]}... -> {safe_filename[:50]}...")
                     except Exception as e:
-                        logger.warning(f"重命名文件失败 {file.name}: {e}")
+                        logger.warning(f"最终重命名失败 {file.name}: {e}")
 
             if renamed_count > 0:
-                logger.info(f"✅ 已清理 {renamed_count} 个过长文件名")
+                logger.info(f"✅ 最终清理完成，处理了 {renamed_count} 个文件")
 
             # 创建下载结果
             return create_download_result(local_path, True, "所有文件")
