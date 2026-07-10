@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="dupan-download",
-    version="2.1.0",
+    version="2.1.5",
     description="百度网盘自动下载SFTP上传工具",
     author="Your Name",
     packages=find_packages(),
