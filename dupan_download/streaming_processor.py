@@ -1,6 +1,7 @@
 """流式下载上传处理器 - 优化版本"""
 import logging
 import os
+import shutil
 from pathlib import Path
 from typing import List, Optional, Callable
 from dataclasses import dataclass
@@ -292,6 +293,16 @@ class StreamingProcessor:
             # 创建临时目录
             local_temp_dir.mkdir(parents=True, exist_ok=True)
 
+            # 下载开始前清空临时目录（避免旧的文件干扰）
+            if local_temp_dir.exists() and list(local_temp_dir.iterdir()):
+                self.logger.info(f"🗑️  清空临时目录: {local_temp_dir}")
+                for item in local_temp_dir.iterdir():
+                    if item.is_file():
+                        item.unlink()
+                    elif item.is_dir():
+                        shutil.rmtree(item)
+                self.logger.info("✅ 临时目录已清空")
+
             # 检查本地临时目录是否已有文件
             existing_local_files = []
             if local_temp_dir.exists():
@@ -325,15 +336,20 @@ class StreamingProcessor:
                 local_files = existing_local_files
             else:
                 # 使用bypy下载整个文件夹到临时目录
-                self._notify_progress("🔽 开始下载文件夹...")
+                self._notify_progress("[DOWNLOAD] 开始下载文件夹...")
                 self.logger.info(f"百度网盘路径: {remote_folder}")
                 self.logger.info(f"本地临时目录: {local_temp_dir}")
+                self.logger.info("[PROGRESS] 正在下载文件，请稍候...")
 
                 try:
                     # bypy下载整个文件夹
-                    self.logger.info("正在调用bypy下载...")
+                    import time
+                    start_time = time.time()
+
                     self.byp.download(remote_folder, str(local_temp_dir))
-                    self.logger.info("✅ 百度网盘下载完成")
+
+                    elapsed_time = time.time() - start_time
+                    self.logger.info(f"[COMPLETE] 下载完成 (耗时: {elapsed_time:.1f}秒)")
 
                     # 立即清理过长文件名（bypy下载后的关键步骤）
                     self.logger.info("正在清理过长文件名...")
@@ -384,9 +400,12 @@ class StreamingProcessor:
                 local_files = [f for f in local_files if f.is_file()]
 
             result.total_files = len(local_files)
-            self._notify_progress(f"共 {result.total_files} 个文件")
+            self.logger.info(f"[STATS] 下载完成: 共找到 {result.total_files} 个文件")
+            self.logger.info(f"[PROGRESS] 即将开始处理文件上传...")
 
             # 流式处理：检查本地文件，上传到SFTP
+            self.logger.info(f"[PROCESS] 开始处理 {result.total_files} 个文件...")
+
             for idx, local_file in enumerate(local_files, 1):
                 try:
                     # 计算相对路径
@@ -415,16 +434,19 @@ class StreamingProcessor:
                     # 构建SFTP目标路径
                     sftp_target = f"{sftp_base_path}/{relative_path}".replace('\\', '/') if sftp_base_path else None
 
+                    # 显示当前处理进度
+                    self.logger.info(f"[PROCESSING] 文件 {idx}/{result.total_files}: {relative_path}")
+
                     # 检查是否是从本地已有文件（跳过下载）
                     is_from_local = local_file in existing_local_files if existing_local_files else False
 
                     # 检查文件是否已存在于SFTP
                     if sftp_target and self.sftp_connected and self._check_file_exists_on_sftp(sftp_target, file_size):
                         if is_from_local:
-                            self._notify_progress(f"⏭️  完全跳过（本地+SFTP都有）: {relative_path} ({idx}/{result.total_files})", idx, result.total_files)
+                            self._notify_progress(f"[SKIP] 完全跳过（本地+SFTP都有）: {relative_path} [{idx}/{result.total_files}]", idx, result.total_files)
                             result.skipped_files += 1
                         else:
-                            self._notify_progress(f"⏭️  跳过上传（SFTP已有）: {relative_path} ({idx}/{result.total_files})", idx, result.total_files)
+                            self._notify_progress(f"[SKIP] 跳过上传（SFTP已有）: {relative_path} [{idx}/{result.total_files}]", idx, result.total_files)
                             result.skipped_sftp_only += 1
 
                         # 如果是从本地已有文件，保留；如果是新下载的，按原有逻辑处理
@@ -436,9 +458,9 @@ class StreamingProcessor:
                     # 上传到SFTP
                     if sftp_target and self.sftp_connected:
                         if is_from_local:
-                            self._notify_progress(f"☁️  上传（本地已有）: {relative_path} ({idx}/{result.total_files})", idx, result.total_files)
+                            self._notify_progress(f"[UPLOAD] 上传（本地已有）: {relative_path} [{idx}/{result.total_files}]", idx, result.total_files)
                         else:
-                            self._notify_progress(f"☁️  上传: {relative_path} ({idx}/{result.total_files})", idx, result.total_files)
+                            self._notify_progress(f"[UPLOAD] 上传: {relative_path} [{idx}/{result.total_files}]", idx, result.total_files)
 
                         try:
                             # 确保远程目录存在
@@ -453,9 +475,9 @@ class StreamingProcessor:
                                 result.total_size += file_size
                                 if is_from_local:
                                     result.uploaded_from_local += 1
-                                    self.logger.info(f"✅ 从本地上传成功: {relative_path}")
+                                    self.logger.info(f"✅ 上传成功: {relative_path} ({idx}/{result.total_files})")
                                 else:
-                                    self.logger.info(f"✅ 上传成功: {relative_path}")
+                                    self.logger.info(f"✅ 上传成功: {relative_path} ({idx}/{result.total_files})")
                             else:
                                 result.failed_uploads += 1
                                 error_detail = f"上传失败: {relative_path} - {upload_result.error}"
@@ -492,23 +514,34 @@ class StreamingProcessor:
             self.logger.info("=" * 60)
             self.logger.info("流式处理完成")
             self.logger.info("=" * 60)
-            self.logger.info(f"总文件数: {result.total_files}")
+            self.logger.info(f"[TOTAL] 总文件数: {result.total_files}")
             if existing_local_files:
-                self.logger.info(f"📁 本地已有文件: {len(existing_local_files)} (跳过百度网盘下载)")
-            self.logger.info(f"☁️  已上传: {result.uploaded_files}")
+                self.logger.info(f"[LOCAL] 本地已有文件: {len(existing_local_files)} (跳过百度网盘下载)")
+            self.logger.info(f"[SUCCESS] 已上传: {result.uploaded_files}")
             if result.uploaded_from_local > 0:
-                self.logger.info(f"   └─ 从本地已有上传: {result.uploaded_from_local}")
-            self.logger.info(f"⏭️  完全跳过: {result.skipped_files} (本地+SFTP都有)")
+                self.logger.info(f"         └─ 从本地已有上传: {result.uploaded_from_local}")
+            self.logger.info(f"[SKIP] 完全跳过: {result.skipped_files} (本地+SFTP都有)")
             if result.skipped_sftp_only > 0:
-                self.logger.info(f"⏭️  跳过上传: {result.skipped_sftp_only} (SFTP已有)")
-            self.logger.info(f"❌ 下载失败: {result.failed_downloads}")
-            self.logger.info(f"❌ 上传失败: {result.failed_uploads}")
-            self.logger.info(f"📊 总大小: {result.total_size} bytes ({result.total_size / 1024 / 1024:.2f} MB)")
+                self.logger.info(f"[SKIP] 跳过上传: {result.skipped_sftp_only} (SFTP已有)")
+            self.logger.info(f"[ERROR] 下载失败: {result.failed_downloads}")
+            self.logger.info(f"[ERROR] 上传失败: {result.failed_uploads}")
+            self.logger.info(f"[SIZE] 总大小: {result.total_size} bytes ({result.total_size / 1024 / 1024:.2f} MB)")
 
+            # 显示详细的失败文件列表
             if result.errors:
-                self.logger.warning(f"⚠️  错误数量: {len(result.errors)}")
-                for error in result.errors[:5]:  # 只显示前5个错误
-                    self.logger.warning(f"  - {error}")
+                self.logger.warning(f"⚠️  错误详情 (共 {len(result.errors)} 个):")
+                for idx, error in enumerate(result.errors, 1):
+                    self.logger.warning(f"  {idx}. {error}")
+
+            # 上传完成后清空临时目录（如果不需要保留本地文件）
+            if not self.keep_local and local_temp_dir.exists() and list(local_temp_dir.iterdir()):
+                self.logger.info(f"🗑️  上传完成，清空临时目录: {local_temp_dir}")
+                for item in local_temp_dir.iterdir():
+                    if item.is_file():
+                        item.unlink()
+                    elif item.is_dir():
+                        shutil.rmtree(item)
+                self.logger.info("✅ 临时目录已清空")
 
             return result
 

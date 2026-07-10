@@ -1,0 +1,125 @@
+# 百度网盘下载工具 v2.1.4 - 使用说明
+
+## 快速开始
+
+### 1. 环境准备
+- Windows 10/11
+- 无需安装Python或其他依赖
+
+### 2. 配置文件
+复制 `.env.example` 为 `.env` 并配置必要参数：
+
+```bash
+# 百度网盘配置（可选）
+# BAIDU_BDUSS=your_bduss_here
+# BAIDU_COOKIES=your_cookies_here
+
+# SFTP服务器配置（必需）
+SFTP_HOST=your_sftp_host
+SFTP_PORT=22
+SFTP_USERNAME=your_username
+SFTP_PASSWORD=your_password
+SFTP_REMOTE_PATH=/remote/path
+
+# 其他配置
+TIMEOUT=300
+MAX_RETRIES=5
+```
+
+### 3. 百度网盘认证
+
+#### 方法一：环境变量配置（推荐）
+在 `.env` 文件中设置：
+- `BAIDU_BDUSS`: 浏览器开发者工具中获取
+- `BAIDU_COOKIES`: 完整的Cookie字符串
+
+#### 方法二：使用认证向导
+```bash
+pan-download.exe --setup-bypi
+```
+
+### 4. 基本使用
+
+#### 只下载文件
+```bash
+pan-download.exe apps/bypy/folder_name
+```
+
+#### 下载并上传到SFTP
+```bash
+pan-download.exe apps/bypy/folder_name --upload-sftp
+```
+
+#### 保留临时文件
+```bash
+pan-download.exe apps/bypy/folder_name --upload-sftp --keep-temp
+```
+
+#### 详细日志输出
+```bash
+pan-download.exe apps/bypy/folder_name --upload-sftp --verbose
+```
+
+### 5. 高级功能
+
+#### 流式处理模式
+下载一个文件后立即上传，节省磁盘空间：
+```bash
+pan-download.exe apps/bypy/folder_name --upload-sftp --streaming
+```
+
+#### 测试配置
+验证配置是否正确：
+```bash
+pan-download.exe --test-config
+```
+
+### 6. 常见问题
+
+#### 问题：下载失败，文件名太长
+**解决方案**：工具自动使用简短临时路径（如 `d:\a`），避免Windows路径长度限制。
+
+#### 问题：认证失败
+**解决方案**：
+1. 检查 `.env` 文件配置
+2. 运行 `pan-download.exe --test-config` 测试
+3. 重新运行 `pan-download.exe --setup-bypi`
+
+#### 问题：SFTP连接失败
+**解决方案**：
+1. 检查SFTP服务器地址、端口、用户名、密码
+2. 确认网络连接正常
+3. 检查防火墙设置
+
+### 7. 统计信息说明
+
+处理完成后会显示详细统计：
+- **总文件数**: 处理的文件总数
+- **已上传**: 成功上传到SFTP的文件数
+- **完全跳过**: 本地和SFTP都存在的文件（跳过处理）
+- **下载失败**: 下载失败的文件数
+- **上传失败**: 上传失败的文件数
+
+如果有失败文件，会显示详细的失败文件列表。
+
+### 8. 技术特性
+
+- [OK] 支持长文件名（220字符）
+- [OK] 自动管理临时目录
+- [OK] 流式处理，节省磁盘空间
+- [OK] 详细错误报告
+- [OK] 自动重试机制
+- [OK] 进度实时显示
+
+### 9. 版本信息
+
+- **当前版本**: v2.1.4
+- **编译时间**: 2026-07-09 11:17:49
+- **Python版本**: 3.12
+
+### 10. 支持和反馈
+
+如有问题或建议，请联系开发团队。
+
+---
+**百度网盘下载工具** - 自动化文件传输解决方案

@@ -4,5 +4,5 @@
 自动从百度网盘下载文件夹并上传到SFTP服务器的命令行工具
 """
 
-__version__ = "2.1.0"
+__version__ = "2.1.4"
 __author__ = "Your Name"
