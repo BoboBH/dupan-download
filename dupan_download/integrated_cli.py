@@ -104,7 +104,7 @@ def main(share_link: Optional[str], extract_code: Optional[str], local_dir: Opti
                 logger.error(f"转存失败: {transfer_result.error}")
                 sys.exit(1)
 
-            logger.info(f"✅ 转存成功: {transfer_result.source_folder} -> {transfer_result.target_folder}")
+            logger.info(f"[OK] 转存成功: {transfer_result.source_folder} -> {transfer_result.target_folder}")
             logger.info(f"转存文件数: {transfer_result.files_count}")
 
             # 设置远程路径为转存后的路径
@@ -206,8 +206,8 @@ def main(share_link: Optional[str], extract_code: Optional[str], local_dir: Opti
                         logger.warning(f"  - {error}")
 
             # 最终报告
-            click.echo(f"\n🎉 流式处理完成！")
-            click.echo(f"📊 处理统计:")
+            click.echo(f"\n[SUCCESS] 流式处理完成！")
+            click.echo(f"[STATS] 处理统计:")
             click.echo(f"   - 总文件: {result.total_files}")
             click.echo(f"   - 已上传: {result.uploaded_files}")
             if hasattr(result, 'uploaded_from_local') and result.uploaded_from_local > 0:
@@ -296,13 +296,13 @@ def main(share_link: Optional[str], extract_code: Optional[str], local_dir: Opti
         # 清理临时文件
         if not keep_temp:
             cleanup_temp_dir(local_path)
-            logger.info("✅ 已清理临时文件")
+            logger.info("[OK] 已清理临时文件")
         else:
-            logger.info(f"📁 临时文件已保留: {local_path}")
+            logger.info(f"[FOLDER] 临时文件已保留: {local_path}")
 
             # 提供额外的便利信息
-            click.echo(f"\n📁 临时文件位置: {local_path}")
-            click.echo(f"💡 提示: 你可以手动打开此文件夹访问下载的文件")
+            click.echo(f"\n[FOLDER] 临时文件位置: {local_path}")
+            click.echo(f"[INFO] 提示: 你可以手动打开此文件夹访问下载的文件")
 
             # 尝试打开文件夹（仅Windows）
             if local_path.exists():
@@ -310,12 +310,12 @@ def main(share_link: Optional[str], extract_code: Optional[str], local_dir: Opti
                     import subprocess
                     import os
                     if os.name == 'nt':  # Windows
-                        click.echo("📂 正在打开文件位置...")
+                        click.echo("[OPEN] 正在打开文件位置...")
                         subprocess.run(['explorer', str(local_path)], check=True)
-                        logger.info("✅ 已自动打开文件位置")
+                        logger.info("[OK] 已自动打开文件位置")
                 except Exception as e:
                     logger.info(f"ℹ️  无法自动打开文件夹: {e}")
-                    click.echo("💡 请手动复制上面的路径到文件资源管理器中打开")
+                    click.echo("[INFO] 请手动复制上面的路径到文件资源管理器中打开")
 
         # 最终报告
         logger.info("=" * 50)
@@ -327,33 +327,33 @@ def main(share_link: Optional[str], extract_code: Optional[str], local_dir: Opti
             # 这里可以从upload_results获取上传统计
             logger.info(f"SFTP上传: 已完成")
 
-        click.echo(f"\n🎉 任务完成！")
+        click.echo(f"\n[SUCCESS] 任务完成！")
 
         # 下载位置信息
         click.echo(f"📥 下载位置: {local_path}")
 
         # 临时文件状态
         if keep_temp:
-            click.echo(f"💾 临时文件: 已保留 ({local_path})")
+            click.echo(f"[SAVE] 临时文件: 已保留 ({local_path})")
             # 显示文件夹大小
             if local_path.exists():
                 try:
                     import os
                     size = sum(f.stat().st_size for f in local_path.rglob('*') if f.is_file())
                     size_mb = size / (1024 * 1024)
-                    click.echo(f"📊 文件大小: {size_mb:.2f} MB")
+                    click.echo(f"[STATS] 文件大小: {size_mb:.2f} MB")
                 except:
                     pass
         else:
-            click.echo(f"🗑️  临时文件: 已清理")
+            click.echo(f"[DELETE]  临时文件: 已清理")
 
         # SFTP上传状态
         if upload_sftp:
-            click.echo(f"☁️  SFTP上传: {get_config().sftp_remote_path}")
+            click.echo(f"[CLOUD]  SFTP上传: {get_config().sftp_remote_path}")
 
         # 提供后续操作建议
         if keep_temp and local_path.exists():
-            click.echo(f"\n💡 下一步操作:")
+            click.echo(f"\n[INFO] 下一步操作:")
             click.echo(f"   - 查看文件: {local_path}")
             click.echo(f"   - 手动上传到其他位置")
             click.echo(f"   - 完成后手动删除此文件夹")
@@ -421,9 +421,9 @@ def download_folder(remote_folder: str, local_path: Path):
 
             if new_estimated_length <= 260:
                 local_path = ultra_short_path
-                logger.info("✅ 路径长度现在在安全范围内")
+                logger.info("[OK] 路径长度现在在安全范围内")
             else:
-                logger.error("❌ 即使使用极短路径，仍然可能超过限制")
+                logger.error("[ERROR] 即使使用极短路径，仍然可能超过限制")
                 # 尝试使用更短的方案
                 local_path = ultra_short_path  # 无论如何都使用短路径
 
@@ -510,7 +510,7 @@ def download_folder(remote_folder: str, local_path: Path):
                         logger.warning(f"最终重命名失败 {file.name}: {e}")
 
             if renamed_count > 0:
-                logger.info(f"✅ 最终清理完成，处理了 {renamed_count} 个文件")
+                logger.info(f"[OK] 最终清理完成，处理了 {renamed_count} 个文件")
 
             # 创建下载结果
             return create_download_result(local_path, True, "所有文件")
@@ -567,15 +567,15 @@ def setup_bypy_wizard():
         # 检查bypy是否可用
         click.echo("1. 检查bypy可用性...")
         if not BYPY_AVAILABLE:
-            click.echo("❌ bypy模块不可用")
+            click.echo("[ERROR] bypy模块不可用")
             click.echo("请确保程序正确打包，包含了bypy模块")
             return
 
         try:
             byp = ByPy()
-            click.echo("✅ bypy模块已加载")
+            click.echo("[OK] bypy模块已加载")
         except Exception as e:
-            click.echo(f"❌ bypy初始化失败: {e}")
+            click.echo(f"[ERROR] bypy初始化失败: {e}")
             return
 
         click.echo("")
@@ -623,19 +623,19 @@ def setup_bypy_wizard():
             try:
                 byp.quota()
                 output = captured_output.getvalue()
-                click.echo("✅ 认证验证成功！")
+                click.echo("[OK] 认证验证成功！")
                 if output.strip():
                     click.echo("")
                     click.echo("百度网盘配额信息:")
                     click.echo(output)
             except Exception as e:
-                click.echo(f"❌ 认证验证失败: {e}")
+                click.echo(f"[ERROR] 认证验证失败: {e}")
                 click.echo("请按照上述方法完成认证配置")
             finally:
                 sys.stdout = old_stdout
 
         except Exception as e:
-            click.echo(f"❌ 验证过程出错: {e}")
+            click.echo(f"[ERROR] 验证过程出错: {e}")
 
         click.echo("=" * 60)
         click.echo("")
@@ -667,7 +667,7 @@ def setup_bypy_wizard():
         if os.path.exists(bypy_dir):
             files = os.listdir(bypy_dir)
             if files:
-                click.echo(f"✅ 发现认证文件: {bypy_dir}")
+                click.echo(f"[OK] 发现认证文件: {bypy_dir}")
                 for file in files:
                     file_path = os.path.join(bypy_dir, file)
                     if os.path.isfile(file_path):
@@ -676,7 +676,7 @@ def setup_bypy_wizard():
             else:
                 click.echo(f"⚠️  认证目录存在但为空: {bypy_dir}")
         else:
-            click.echo(f"❌ 未找到认证目录: {bypy_dir}")
+            click.echo(f"[ERROR] 未找到认证目录: {bypy_dir}")
             click.echo("请按照上述说明配置认证文件")
 
         click.echo("")
@@ -687,7 +687,7 @@ def setup_bypy_wizard():
         click.echo("")
 
     except Exception as e:
-        click.echo(f"❌ 认证向导失败: {e}")
+        click.echo(f"[ERROR] 认证向导失败: {e}")
         logger.error(f"认证向导失败: {e}")
 
 
@@ -706,7 +706,7 @@ def test_configuration():
         # 测试bypy配置
         click.echo("1. 测试bypy配置...")
         if not BYPY_AVAILABLE:
-            click.echo("❌ bypy模块不可用")
+            click.echo("[ERROR] bypy模块不可用")
             click.echo("   请确保程序正确打包")
             all_ok = False
         else:
@@ -724,18 +724,18 @@ def test_configuration():
                 try:
                     byp.quota()
                     output = captured_output.getvalue()
-                    click.echo("✅ bypy配置正常")
+                    click.echo("[OK] bypy配置正常")
                     if output.strip():
                         click.echo(f"   配额信息: {output.strip()[:100]}...")
                 except Exception as e:
-                    click.echo(f"❌ bypy配置有问题: {e}")
+                    click.echo(f"[ERROR] bypy配置有问题: {e}")
                     click.echo("   请运行: pan-download --setup-bypy")
                     all_ok = False
                 finally:
                     sys.stdout = old_stdout
 
             except Exception as e:
-                click.echo(f"❌ bypy初始化失败: {e}")
+                click.echo(f"[ERROR] bypy初始化失败: {e}")
                 all_ok = False
 
         click.echo("")
@@ -756,40 +756,40 @@ def test_configuration():
                 missing.append("SFTP_USERNAME")
 
             if missing:
-                click.echo(f"❌ SFTP配置缺少必要参数: {', '.join(missing)}")
+                click.echo(f"[ERROR] SFTP配置缺少必要参数: {', '.join(missing)}")
                 click.echo("   请在.env文件中配置这些参数")
                 all_ok = False
             else:
-                click.echo("✅ SFTP配置完整")
+                click.echo("[OK] SFTP配置完整")
 
                 # 尝试连接SFTP
                 try:
                     from .uploader import SFTPUploader
                     uploader = SFTPUploader()
                     if uploader.connect():
-                        click.echo("✅ SFTP连接成功")
+                        click.echo("[OK] SFTP连接成功")
                         uploader.disconnect()
                     else:
-                        click.echo("❌ SFTP连接失败")
+                        click.echo("[ERROR] SFTP连接失败")
                         all_ok = False
                 except Exception as e:
-                    click.echo(f"❌ SFTP连接出错: {e}")
+                    click.echo(f"[ERROR] SFTP连接出错: {e}")
                     all_ok = False
 
         except Exception as e:
-            click.echo(f"❌ 配置文件有问题: {e}")
+            click.echo(f"[ERROR] 配置文件有问题: {e}")
             all_ok = False
 
         click.echo("")
         click.echo("=" * 60)
         if all_ok:
-            click.echo("🎉 所有配置检查通过！可以开始使用。")
+            click.echo("[SUCCESS] 所有配置检查通过！可以开始使用。")
         else:
             click.echo("⚠️  有些配置需要修复，请按照提示操作。")
         click.echo("=" * 60)
 
     except Exception as e:
-        click.echo(f"❌ 配置测试失败: {e}")
+        click.echo(f"[ERROR] 配置测试失败: {e}")
         logger.error(f"配置测试失败: {e}")
 
 

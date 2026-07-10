@@ -68,11 +68,11 @@ class SFTPUploader:
             # 创建SFTP客户端
             self.sftp_client = self.ssh_client.open_sftp()
 
-            self.logger.info("✅ SFTP连接成功")
+            self.logger.info("[OK] SFTP连接成功")
             return True
 
         except Exception as e:
-            self.logger.error(f"❌ SFTP连接失败: {e}")
+            self.logger.error(f"[ERROR] SFTP连接失败: {e}")
             return False
 
     def disconnect(self) -> None:
@@ -86,7 +86,7 @@ class SFTPUploader:
                 self.ssh_client.close()
                 self.ssh_client = None
 
-            self.logger.info("✅ SFTP连接已断开")
+            self.logger.info("[OK] SFTP连接已断开")
 
         except Exception as e:
             self.logger.error(f"断开连接时出错: {e}")
@@ -131,16 +131,16 @@ class SFTPUploader:
             for dir_path in reversed(dirs):
                 try:
                     self.sftp_client.mkdir(dir_path)
-                    self.logger.info(f"✅ 创建目录: {dir_path}")
+                    self.logger.info(f"[OK] 创建目录: {dir_path}")
                 except Exception as e:
-                    self.logger.error(f"❌ 创建目录失败 {dir_path}: {e}")
+                    self.logger.error(f"[ERROR] 创建目录失败 {dir_path}: {e}")
                     return False
 
-            self.logger.info(f"✅ 目录创建完成: {remote_path}")
+            self.logger.info(f"[OK] 目录创建完成: {remote_path}")
             return True
 
         except Exception as e:
-            self.logger.error(f"❌ 创建目录时出错: {e}")
+            self.logger.error(f"[ERROR] 创建目录时出错: {e}")
             return False
 
     def _file_exists(self, remote_path: str, expected_size: int) -> bool:
@@ -198,7 +198,7 @@ class SFTPUploader:
                     size=file_size
                 )
 
-            self.logger.info(f"☁️  开始上传: {local_path.name}")
+            self.logger.info(f"[CLOUD]  开始上传: {local_path.name}")
             self.logger.info(f"   源文件: {local_path}")
             self.logger.info(f"   目标路径: {remote_path}")
             self.logger.info(f"   文件大小: {file_size} bytes ({file_size / 1024:.2f} KB)")
@@ -209,7 +209,7 @@ class SFTPUploader:
                 self.logger.info(f"   创建远程目录: {remote_dir}")
                 if not self.create_remote_dir(remote_dir):
                     error_reason = f"无法创建远程目录: {remote_dir}"
-                    self.logger.error(f"❌ 上传失败: {error_reason}")
+                    self.logger.error(f"[ERROR] 上传失败: {error_reason}")
                     return UploadResult(
                         success=False,
                         local_path=str(local_path),
@@ -243,7 +243,7 @@ class SFTPUploader:
                         if attempt == self.max_retries - 1:
                             self.logger.warning(f"   文件可能已上传，但无法验证")
 
-                    self.logger.info(f"✅ 上传完成: {remote_path}")
+                    self.logger.info(f"[OK] 上传完成: {remote_path}")
                     self.logger.info(f"   传输大小: {file_size} bytes")
                     return UploadResult(
                         success=True,
@@ -256,7 +256,7 @@ class SFTPUploader:
                     error_reason = f"权限错误 - 无法上传到 {remote_path}: {e}"
                     self.logger.warning(f"⚠️  上传重试 ({attempt + 1}/{self.max_retries}): {error_reason}")
                     if attempt == self.max_retries - 1:
-                        self.logger.error(f"❌ 上传失败: {error_reason}")
+                        self.logger.error(f"[ERROR] 上传失败: {error_reason}")
                         return UploadResult(
                             success=False,
                             local_path=str(local_path),
@@ -268,7 +268,7 @@ class SFTPUploader:
                     error_reason = f"超时错误 - 上传超时 ({self.transfer_timeout}秒): {e}"
                     self.logger.warning(f"⚠️  上传重试 ({attempt + 1}/{self.max_retries}): {error_reason}")
                     if attempt == self.max_retries - 1:
-                        self.logger.error(f"❌ 上传失败: {error_reason}")
+                        self.logger.error(f"[ERROR] 上传失败: {error_reason}")
                         return UploadResult(
                             success=False,
                             local_path=str(local_path),
@@ -307,7 +307,7 @@ class SFTPUploader:
 
                     self.logger.warning(f"⚠️  上传重试 ({attempt + 1}/{self.max_retries}): {error_reason}")
                     if attempt == self.max_retries - 1:
-                        self.logger.error(f"❌ 上传失败: {error_reason}")
+                        self.logger.error(f"[ERROR] 上传失败: {error_reason}")
                         return UploadResult(
                             success=False,
                             local_path=str(local_path),
@@ -326,7 +326,7 @@ class SFTPUploader:
 
                     self.logger.warning(f"⚠️  上传重试 ({attempt + 1}/{self.max_retries}): {error_reason}")
                     if attempt == self.max_retries - 1:
-                        self.logger.error(f"❌ 上传失败: {error_reason}")
+                        self.logger.error(f"[ERROR] 上传失败: {error_reason}")
                         return UploadResult(
                             success=False,
                             local_path=str(local_path),
@@ -345,7 +345,7 @@ class SFTPUploader:
 
         except FileNotFoundError as e:
             error_reason = f"文件未找到 - 本地文件不存在: {local_path}: {e}"
-            self.logger.error(f"❌ 上传失败: {error_reason}")
+            self.logger.error(f"[ERROR] 上传失败: {error_reason}")
             return UploadResult(
                 success=False,
                 local_path=str(local_path),
@@ -355,7 +355,7 @@ class SFTPUploader:
             )
         except Exception as e:
             error_reason = f"上传失败 - {type(e).__name__}: {e}"
-            self.logger.error(f"❌ 上传失败: {error_reason}")
+            self.logger.error(f"[ERROR] 上传失败: {error_reason}")
             return UploadResult(
                 success=False,
                 local_path=str(local_path),
@@ -409,5 +409,5 @@ class SFTPUploader:
             return results
 
         except Exception as e:
-            self.logger.error(f"❌ 上传文件夹失败: {e}")
+            self.logger.error(f"[ERROR] 上传文件夹失败: {e}")
             return results

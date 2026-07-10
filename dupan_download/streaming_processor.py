@@ -295,13 +295,13 @@ class StreamingProcessor:
 
             # 下载开始前清空临时目录（避免旧的文件干扰）
             if local_temp_dir.exists() and list(local_temp_dir.iterdir()):
-                self.logger.info(f"🗑️  清空临时目录: {local_temp_dir}")
+                self.logger.info(f"[DELETE]  清空临时目录: {local_temp_dir}")
                 for item in local_temp_dir.iterdir():
                     if item.is_file():
                         item.unlink()
                     elif item.is_dir():
                         shutil.rmtree(item)
-                self.logger.info("✅ 临时目录已清空")
+                self.logger.info("[OK] 临时目录已清空")
 
             # 检查本地临时目录是否已有文件
             existing_local_files = []
@@ -331,7 +331,7 @@ class StreamingProcessor:
                     local_temp_dir = short_temp_dir
 
             if existing_local_files:
-                self.logger.info(f"📁 发现本地已有 {len(existing_local_files)} 个文件，跳过百度网盘下载")
+                self.logger.info(f"[FOLDER] 发现本地已有 {len(existing_local_files)} 个文件，跳过百度网盘下载")
                 self._notify_progress(f"跳过下载（本地已有 {len(existing_local_files)} 个文件）")
                 local_files = existing_local_files
             else:
@@ -377,22 +377,22 @@ class StreamingProcessor:
                             self.logger.warning(f"重命名文件失败 {file.name}: {rename_error}")
 
                     if renamed_count > 0:
-                        self.logger.info(f"✅ 已清理 {renamed_count} 个过长文件名")
+                        self.logger.info(f"[OK] 已清理 {renamed_count} 个过长文件名")
 
                 except PermissionError as e:
                     error_reason = f"下载权限错误: {e}"
                     result.errors.append(error_reason)
-                    self.logger.error(f"❌ 下载失败: {error_reason}")
+                    self.logger.error(f"[ERROR] 下载失败: {error_reason}")
                     return result
                 except ConnectionError as e:
                     error_reason = f"网络连接错误: {e}"
                     result.errors.append(error_reason)
-                    self.logger.error(f"❌ 下载失败: {error_reason}")
+                    self.logger.error(f"[ERROR] 下载失败: {error_reason}")
                     return result
                 except Exception as e:
                     error_reason = f"下载失败 - {type(e).__name__}: {e}"
                     result.errors.append(error_reason)
-                    self.logger.error(f"❌ 下载失败: {error_reason}")
+                    self.logger.error(f"[ERROR] 下载失败: {error_reason}")
                     return result
 
                 # 获取下载的文件列表（重新获取，因为文件名可能已改变）
@@ -475,25 +475,25 @@ class StreamingProcessor:
                                 result.total_size += file_size
                                 if is_from_local:
                                     result.uploaded_from_local += 1
-                                    self.logger.info(f"✅ 上传成功: {relative_path} ({idx}/{result.total_files})")
+                                    self.logger.info(f"[OK] 上传成功: {relative_path} ({idx}/{result.total_files})")
                                 else:
-                                    self.logger.info(f"✅ 上传成功: {relative_path} ({idx}/{result.total_files})")
+                                    self.logger.info(f"[OK] 上传成功: {relative_path} ({idx}/{result.total_files})")
                             else:
                                 result.failed_uploads += 1
                                 error_detail = f"上传失败: {relative_path} - {upload_result.error}"
                                 result.errors.append(error_detail)
-                                self.logger.error(f"❌ {error_detail}")
+                                self.logger.error(f"[ERROR] {error_detail}")
 
                         except Exception as e:
                             result.failed_uploads += 1
                             error_detail = f"上传异常: {relative_path} - {type(e).__name__}: {e}"
                             result.errors.append(error_detail)
-                            self.logger.error(f"❌ {error_detail}")
+                            self.logger.error(f"[ERROR] {error_detail}")
 
                     else:
                         # 仅下载不上传
                         if is_from_local:
-                            self.logger.info(f"📁 本地已有（未配置SFTP）: {relative_path}")
+                            self.logger.info(f"[FOLDER] 本地已有（未配置SFTP）: {relative_path}")
                         else:
                             result.downloaded_files += 1
                         result.total_size += file_size
@@ -502,13 +502,13 @@ class StreamingProcessor:
                     if not self.keep_local and not is_from_local and local_file.exists():
                         local_file.unlink()
                     elif is_from_local and self.keep_local:
-                        self.logger.info(f"📁 保留本地文件: {relative_path}")
+                        self.logger.info(f"[FOLDER] 保留本地文件: {relative_path}")
 
                 except Exception as e:
                     result.failed_downloads += 1
                     error_detail = f"处理失败: {relative_path} - {type(e).__name__}: {e}"
                     result.errors.append(error_detail)
-                    self.logger.error(f"❌ {error_detail}")
+                    self.logger.error(f"[ERROR] {error_detail}")
 
             # 总结
             self.logger.info("=" * 60)
@@ -535,13 +535,13 @@ class StreamingProcessor:
 
             # 上传完成后清空临时目录（如果不需要保留本地文件）
             if not self.keep_local and local_temp_dir.exists() and list(local_temp_dir.iterdir()):
-                self.logger.info(f"🗑️  上传完成，清空临时目录: {local_temp_dir}")
+                self.logger.info(f"[DELETE]  上传完成，清空临时目录: {local_temp_dir}")
                 for item in local_temp_dir.iterdir():
                     if item.is_file():
                         item.unlink()
                     elif item.is_dir():
                         shutil.rmtree(item)
-                self.logger.info("✅ 临时目录已清空")
+                self.logger.info("[OK] 临时目录已清空")
 
             return result
 

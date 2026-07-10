@@ -193,7 +193,7 @@ class BaiduDownloader:
             download_url = self._get_download_url(remote_path)
             if not download_url:
                 error_reason = "无法获取下载链接 - 可能是文件权限不足或链接已过期"
-                self.logger.error(f"❌ 下载失败: {error_reason}")
+                self.logger.error(f"[ERROR] 下载失败: {error_reason}")
                 return DownloadResult(
                     success=False,
                     local_path=None,
@@ -207,7 +207,7 @@ class BaiduDownloader:
             response = self._make_request(download_url, stream=True)
             if not response:
                 error_reason = f"下载请求失败 - HTTP状态码: {response.status_code if response else '无响应'}"
-                self.logger.error(f"❌ 下载失败: {error_reason}")
+                self.logger.error(f"[ERROR] 下载失败: {error_reason}")
                 return DownloadResult(
                     success=False,
                     local_path=None,
@@ -229,7 +229,7 @@ class BaiduDownloader:
                         if chunk_count % 128 == 0:  # 1MB = 128 * 8KB
                             self.logger.info(f"   已下载: {total_size / 1024 / 1024:.2f} MB")
 
-            self.logger.info(f"✅ 下载完成: {local_path}")
+            self.logger.info(f"[OK] 下载完成: {local_path}")
             self.logger.info(f"   文件大小: {total_size} bytes ({total_size / 1024:.2f} KB)")
             return DownloadResult(
                 success=True,
@@ -240,7 +240,7 @@ class BaiduDownloader:
 
         except PermissionError as e:
             error_reason = f"权限错误 - 无法写入文件 {local_path}: {e}"
-            self.logger.error(f"❌ 下载失败: {error_reason}")
+            self.logger.error(f"[ERROR] 下载失败: {error_reason}")
             return DownloadResult(
                 success=False,
                 local_path=None,
@@ -250,7 +250,7 @@ class BaiduDownloader:
             )
         except ConnectionError as e:
             error_reason = f"网络连接错误 - 下载中断: {e}"
-            self.logger.error(f"❌ 下载失败: {error_reason}")
+            self.logger.error(f"[ERROR] 下载失败: {error_reason}")
             return DownloadResult(
                 success=False,
                 local_path=None,
@@ -260,7 +260,7 @@ class BaiduDownloader:
             )
         except Exception as e:
             error_reason = f"下载失败 - {type(e).__name__}: {e}"
-            self.logger.error(f"❌ 下载失败: {error_reason}")
+            self.logger.error(f"[ERROR] 下载失败: {error_reason}")
             return DownloadResult(
                 success=False,
                 local_path=None,

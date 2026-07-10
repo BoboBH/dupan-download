@@ -37,14 +37,14 @@ class BaiduTransfer:
                 match = re.search(pattern, share_link)
                 if match:
                     share_id = match.group(1)
-                    self.logger.info(f"✅ 提取到share_id: {share_id}")
+                    self.logger.info(f"[OK] 提取到share_id: {share_id}")
                     return share_id
 
-            self.logger.error(f"❌ 无法从链接中提取share_id: {share_link}")
+            self.logger.error(f"[ERROR] 无法从链接中提取share_id: {share_link}")
             return None
 
         except Exception as e:
-            self.logger.error(f"❌ 提取share_id失败: {e}")
+            self.logger.error(f"[ERROR] 提取share_id失败: {e}")
             return None
 
     def access_share_via_bypy(self, share_id: str, extract_code: str) -> bool:
@@ -57,12 +57,12 @@ class BaiduTransfer:
             # 由于bypy主要是用于已认证用户的操作，对于分享链接的处理有限
 
             self.logger.info("⚠️  当前bypy版本对分享链接支持有限")
-            self.logger.info("💡 建议先手动在百度网盘Web端转存，或使用分享链接直接下载")
+            self.logger.info("[INFO] 建议先手动在百度网盘Web端转存，或使用分享链接直接下载")
 
             return False
 
         except Exception as e:
-            self.logger.error(f"❌ 通过bypy访问失败: {e}")
+            self.logger.error(f"[ERROR] 通过bypy访问失败: {e}")
             return False
 
     def transfer_to_own_drive_via_bypy(self, share_link: str, extract_code: str, target_folder: str) -> TransferResult:
@@ -77,7 +77,7 @@ class BaiduTransfer:
             self.logger.info("=" * 60)
             self.logger.info(f"📥 分享链接: {share_link}")
             self.logger.info(f"🔑 提取码: {extract_code}")
-            self.logger.info(f"📁 目标路径: {target_folder}")
+            self.logger.info(f"[FOLDER] 目标路径: {target_folder}")
 
             # 提取share_id
             share_id = self.extract_share_id(share_link)
@@ -91,7 +91,7 @@ class BaiduTransfer:
                 )
 
             # 由于bypy的限制，我们需要使用替代方案
-            self.logger.info("💡 当前bypy版本对直接转存支持有限")
+            self.logger.info("[INFO] 当前bypy版本对直接转存支持有限")
             self.logger.info("📋 建议工作流程：")
 
             self.logger.info("1. 方案A：手动转存")
@@ -118,7 +118,7 @@ class BaiduTransfer:
 
         except Exception as e:
             error_msg = f"转存过程出错: {e}"
-            self.logger.error(f"❌ {error_msg}")
+            self.logger.error(f"[ERROR] {error_msg}")
             return TransferResult(
                 success=False,
                 source_folder=share_link,
@@ -134,13 +134,13 @@ class BaiduTransfer:
             if share_id:
                 # 使用share_id的后6位作为文件夹名
                 folder_name = share_id[-6:] if len(share_id) > 6 else share_id
-                self.logger.info(f"📁 推断文件夹名: {folder_name}")
+                self.logger.info(f"[FOLDER] 推断文件夹名: {folder_name}")
                 return folder_name
 
             return None
 
         except Exception as e:
-            self.logger.error(f"❌ 提取文件夹名称失败: {e}")
+            self.logger.error(f"[ERROR] 提取文件夹名称失败: {e}")
             return None
 
     def get_share_content_directly(self, share_link: str, extract_code: str, target_folder: str) -> TransferResult:
